@@ -2,6 +2,7 @@
 
 ```mermaid
 flowchart LR
+
     subgraph U["USER"]
         direction TB
         U1["Uploads required WhatsApp screenshot"]
@@ -10,8 +11,9 @@ flowchart LR
         U4["Reviews and corrects fiscal fields"]
         U5["Optionally enters bank information or uploads one screenshot"]
         U6["Reviews and corrects bank fields"]
-        U7["Reads comparisons, sources, and next steps"]
-        U8["Makes payment decision outside the prototype"]
+        U7["Reads comparisons, sources, limits, and next-step options"]
+        U8["States what they would do next"]
+        U9["Makes payment decision outside the prototype"]
     end
 
     subgraph P["PROTOTYPE"]
@@ -21,9 +23,10 @@ flowchart LR
         P3["Accepts up to one optional fiscal document"]
         P4["Displays fiscal fields as extracted, not SAT-verified"]
         P5["Accepts one bank source by manual entry or screenshot"]
-        P6["Displays entered or extracted bank fields"]
+        P6["Displays entered or extracted bank fields without claiming account-owner verification"]
         P7["Compares only supported corresponding fields"]
-        P8["Classifies, orders, and explains results"]
+        P8["Keeps missing evidence separate from conflicting evidence"]
+        P9["Classifies and explains bounded evidence relationships"]
     end
 
     subgraph V["VISION API"]
@@ -46,6 +49,7 @@ flowchart LR
 
     U2 -->|If no fiscal document| U5
     U4 --> U5
+
     U5 -->|Manual entry| P5
     U5 -->|Screenshot| P5
     P5 -->|Screenshot only| V3
@@ -55,7 +59,9 @@ flowchart LR
 
     U5 -->|If no bank information| P7
     U6 --> P7
+
     P7 --> P8
-    P8 --> U7
+    P8 --> P9
+    P9 --> U7
     U7 --> U8
-```
+    U8 --> U9
