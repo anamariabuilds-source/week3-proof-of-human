@@ -8,4 +8,4 @@ A pre-payment counterparty consistency check for small Mexican businesses receiv
 
 ## Current status
 
-Packet and Blueprint alignment are complete. Commit 1 initializes the mobile-first application shell; evidence input, extraction, and comparison remain intentionally unimplemented.
+Packet and Blueprint alignment are complete. The mobile-first shell now supports validated, in-memory evidence input and editable review. Vision extraction and deterministic comparison remain intentionally unimplemented.

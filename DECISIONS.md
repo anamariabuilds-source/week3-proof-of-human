@@ -52,7 +52,6 @@ The product may eventually use stronger authoritative evidence and expand to oth
 - Final vision-provider selection.
 - Final fiscal-document file support.
 - Final extraction-field and comparison matrix.
-- Evidence input and review/correction implementation.
 - Vision extraction and deterministic comparison implementation.
 
 ## Session Close
@@ -65,3 +64,17 @@ The product may eventually use stronger authoritative evidence and expand to oth
 - Kept evidence input, vision extraction, field definitions, validation, comparison, result states, external APIs, authentication, and persistence outside this commit.
 
 Next first move: implement validated evidence inputs and editable review/correction forms using local state, without adding vision extraction or comparison logic.
+
+### 2026-08-27 — Commit 2 evidence input and review
+
+- Made one WhatsApp payment-instructions screenshot the required starting evidence and kept fiscal and bank evidence optional.
+- Limited image inputs in this increment to one JPG, PNG, or WebP file of at most 5 MB; PDF support remains an open decision for a later increment.
+- Added explicit confirmation that every uploaded image contains fictional or demonstration information only.
+- Added local editable fields for WhatsApp claims (displayed name, RFC, bank, and CLABE), fiscal claims (legal name and RFC), and bank information (displayed beneficiary, bank, and CLABE).
+- Supported one bank source through either manual entry or one fictional banking-app screenshot.
+- Added format and length validation, at-least-one-field validation, and an explicit reviewed/corrected confirmation before each included source can proceed.
+- Kept all files and entered information in browser memory only, with no persistence, external requests, or intentional evidence logging.
+- Labeled fiscal information as document-provided and not SAT-verified, and bank information as user-provided rather than independent account-owner verification.
+- Preserved optional missing evidence as a neutral absence and did not create comparison or result states.
+
+Next first move: select the vision provider and implement extraction-only server calls with strict response validation, while preserving user review/correction and keeping all comparison logic out of the model.
