@@ -1,4 +1,4 @@
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export type EvidenceFields = Record<string, string>;
@@ -13,7 +13,7 @@ export function validateImage(file: File): string | null {
   }
 
   if (file.size > MAX_IMAGE_BYTES) {
-    return "La imagen debe pesar 5 MB o menos.";
+    return "La imagen debe pesar 4 MB o menos.";
   }
 
   if (file.name.length > 120) {

@@ -49,10 +49,9 @@ The main global benchmark is the UK's Confirmation of Payee. This prototype borr
 The product may eventually use stronger authoritative evidence and expand to other messaging channels, while preserving the same pre-payment transaction moment. No trust score and no automated SAFE or FRAUD verdict remain permanent product boundaries.
 
 ## Pending
-- Final vision-provider selection.
-- Final fiscal-document file support.
-- Final extraction-field and comparison matrix.
-- Vision extraction and deterministic comparison implementation.
+- Final deterministic comparison matrix.
+- Deterministic comparison and bounded result-state implementation.
+- First deployment after extraction integration.
 
 ## Session Close
 ### 2026-08-27 — Commit 1 application shell
@@ -78,3 +77,19 @@ Next first move: implement validated evidence inputs and editable review/correct
 - Preserved optional missing evidence as a neutral absence and did not create comparison or result states.
 
 Next first move: select the vision provider and implement extraction-only server calls with strict response validation, while preserving user review/correction and keeping all comparison logic out of the model.
+
+### 2026-08-27 — Commit 3 extraction-only vision integration
+
+- Selected the Google Gemini Developer API with the stable `gemini-2.5-flash-lite` model for extraction only.
+- Locked `GEMINI_API_KEY` as a server-only environment variable; it must not use a `NEXT_PUBLIC_` prefix or enter Git.
+- Kept JPG, PNG, and WebP as the only supported inputs and explicitly excluded PDF support from this working slice.
+- Reduced the maximum image size from 5 MB to 4 MB to remain below Vercel's 4.5 MB function request limit after multipart overhead.
+- Send one image inline from server memory to Gemini. The implementation does not use Gemini File API, Vercel Blob, a database, filesystem persistence, or intentional evidence logging.
+- Locked WhatsApp extraction fields to displayed name, RFC, bank name, and CLABE; fiscal extraction fields to legal name and RFC; and bank-screenshot fields to displayed beneficiary name, bank name, and CLABE.
+- Added strict source-specific response schemas with exact keys, nullable values, `extracted` / `not_found` / `uncertain` states, runtime validation, and rejection of extra fields.
+- Invalid, missing, illegible, ambiguous, or uncertain model output remains empty and unresolved. No confidence scores or model-written explanations are used.
+- Kept all extracted fields editable and reset the reviewed confirmation after every successful extraction. Provider failure leaves manual review/correction available.
+- Added a pre-extraction disclosure that the fictional image is sent to Google. Gemini's unpaid tier may use inputs and outputs for product improvement and human review, so real, personal, sensitive, or confidential evidence remains prohibited.
+- Gemini does not evaluate trust, fraud, safety, identity, ownership, authenticity, SAT status, or evidence relationships. Comparison remains deterministic TypeScript work for a later commit.
+
+Next first move: configure `GEMINI_API_KEY` in the deployment environment and complete Deploy 1, then implement deterministic comparison only after Commit 4 approval.

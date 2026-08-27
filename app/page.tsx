@@ -10,12 +10,19 @@ import {
   validateName,
   validateRfc,
 } from "@/lib/evidence-validation";
+import {
+  EvidenceSource,
+  ExtractionResult,
+  parseExtractionResponse,
+} from "@/lib/extraction-schema";
 
 type FileSelection = { file: File | null; error: string | null };
 type OptionalChoice = "pending" | "add" | "skip";
 type BankChoice = "pending" | "manual" | "screenshot" | "skip";
+type ExtractionUiState = { status: "idle" | "loading" | "success" | "error"; message: string | null };
 
 const emptyFile: FileSelection = { file: null, error: null };
+const idleExtraction: ExtractionUiState = { status: "idle", message: null };
 const initialWhatsApp = { displayedName: "", rfc: "", bank: "", clabe: "" };
 const initialFiscal = { legalName: "", rfc: "" };
 const initialBank = { beneficiaryName: "", bank: "", clabe: "" };
@@ -60,7 +67,7 @@ function FileInput({
         type="file"
       />
       <p className="mt-2 text-xs leading-5 text-ink/55" id={`${id}-help`}>
-        Una imagen JPG, PNG o WebP de máximo 5 MB. No se guarda al salir o recargar.
+        Una imagen JPG, PNG o WebP de máximo 4 MB. No se guarda al salir o recargar.
       </p>
       {selection.file && (
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-mint px-3 py-2 text-sm">
@@ -171,10 +178,40 @@ function ChoiceButton({ selected, children, onClick }: { selected: boolean; chil
   );
 }
 
-function FieldsNotice({ source }: { source: string }) {
+function ExtractionPanel({
+  sourceType,
+  file,
+  fictionalConfirmed,
+  state,
+  onExtract,
+}: {
+  sourceType: EvidenceSource;
+  file: File;
+  fictionalConfirmed: boolean;
+  state: ExtractionUiState;
+  onExtract: (sourceType: EvidenceSource, file: File) => void;
+}) {
   return (
-    <div className="rounded-xl border border-amber/60 bg-amber/15 p-3 text-sm leading-5">
-      <strong>Sin extracción automática todavía.</strong> Captura solo lo que puedes leer en {source} y revísalo antes de continuar.
+    <div className="space-y-3 rounded-xl border border-amber/60 bg-amber/15 p-3 text-sm leading-5">
+      <p>
+        <strong>Antes de extraer:</strong> esta imagen ficticia se enviará a Google Gemini para transcribir únicamente los campos permitidos. No se usa para emitir juicios.
+      </p>
+      <p className="text-xs text-ink/65">En el nivel gratuito, Google puede usar entradas y respuestas para mejorar sus productos. No envíes datos reales, personales, sensibles ni confidenciales.</p>
+      <button
+        className="min-h-11 w-full rounded-xl bg-ink px-4 font-bold text-white disabled:cursor-not-allowed disabled:bg-ink/30"
+        disabled={!fictionalConfirmed || state.status === "loading"}
+        onClick={() => onExtract(sourceType, file)}
+        type="button"
+      >
+        {state.status === "loading" ? "Extrayendo…" : state.status === "success" ? "Volver a extraer" : "Extraer campos con Gemini"}
+      </button>
+      {!fictionalConfirmed && <p className="text-xs text-ink/60">Confirma primero que la imagen contiene solo datos ficticios.</p>}
+      {state.message && (
+        <p className={state.status === "error" ? "font-semibold text-red-700" : "font-semibold text-jade"} role="status">
+          {state.message}
+        </p>
+      )}
+      <p className="text-xs text-ink/60">Si un dato queda vacío o la extracción falla, puedes capturarlo manualmente. Revisa y corrige todo antes de continuar.</p>
     </div>
   );
 }
@@ -195,18 +232,107 @@ export default function Home() {
   const [whatsAppFields, setWhatsAppFields] = useState(initialWhatsApp);
   const [whatsAppFictional, setWhatsAppFictional] = useState(false);
   const [whatsAppReviewed, setWhatsAppReviewed] = useState(false);
+  const [whatsAppExtraction, setWhatsAppExtraction] = useState<ExtractionUiState>(idleExtraction);
 
   const [fiscalChoice, setFiscalChoice] = useState<OptionalChoice>("pending");
   const [fiscalFile, setFiscalFile] = useState<FileSelection>(emptyFile);
   const [fiscalFields, setFiscalFields] = useState(initialFiscal);
   const [fiscalFictional, setFiscalFictional] = useState(false);
   const [fiscalReviewed, setFiscalReviewed] = useState(false);
+  const [fiscalExtraction, setFiscalExtraction] = useState<ExtractionUiState>(idleExtraction);
 
   const [bankChoice, setBankChoice] = useState<BankChoice>("pending");
   const [bankFile, setBankFile] = useState<FileSelection>(emptyFile);
   const [bankFields, setBankFields] = useState(initialBank);
   const [bankFictional, setBankFictional] = useState(false);
   const [bankReviewed, setBankReviewed] = useState(false);
+  const [bankExtraction, setBankExtraction] = useState<ExtractionUiState>(idleExtraction);
+
+  function extractionSetter(sourceType: EvidenceSource) {
+    if (sourceType === "whatsapp") return setWhatsAppExtraction;
+    if (sourceType === "fiscal") return setFiscalExtraction;
+    return setBankExtraction;
+  }
+
+  function applyExtraction(result: ExtractionResult) {
+    if (result.sourceType === "whatsapp") {
+      setWhatsAppFields((current) => ({
+        displayedName: result.fields.displayedName.value ?? current.displayedName,
+        rfc: result.fields.rfc.value ?? current.rfc,
+        bank: result.fields.bankName.value ?? current.bank,
+        clabe: result.fields.clabe.value ?? current.clabe,
+      }));
+      setWhatsAppReviewed(false);
+      return Object.values(result.fields).filter((field) => field.state === "extracted").length;
+    }
+
+    if (result.sourceType === "fiscal") {
+      setFiscalFields((current) => ({
+        legalName: result.fields.legalName.value ?? current.legalName,
+        rfc: result.fields.rfc.value ?? current.rfc,
+      }));
+      setFiscalReviewed(false);
+      return Object.values(result.fields).filter((field) => field.state === "extracted").length;
+    }
+
+    setBankFields((current) => ({
+      beneficiaryName: result.fields.beneficiaryName.value ?? current.beneficiaryName,
+      bank: result.fields.bankName.value ?? current.bank,
+      clabe: result.fields.clabe.value ?? current.clabe,
+    }));
+    setBankReviewed(false);
+    return Object.values(result.fields).filter((field) => field.state === "extracted").length;
+  }
+
+  async function extractImage(sourceType: EvidenceSource, file: File) {
+    const setExtraction = extractionSetter(sourceType);
+    setExtraction({ status: "loading", message: null });
+
+    try {
+      const formData = new FormData();
+      formData.append("sourceType", sourceType);
+      formData.append("image", file);
+      const response = await fetch("/api/extract", { method: "POST", body: formData });
+      const payload: unknown = await response.json();
+
+      if (!response.ok) {
+        const message = typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string"
+          ? payload.error
+          : "No pudimos extraer la información. Captúrala manualmente.";
+        setExtraction({ status: "error", message });
+        return;
+      }
+
+      const result = parseExtractionResponse(sourceType, payload);
+      const extractedCount = applyExtraction(result);
+      setExtraction({
+        status: "success",
+        message: extractedCount > 0
+          ? `Gemini llenó ${extractedCount} ${extractedCount === 1 ? "campo" : "campos"}. Lo demás quedó vacío; revisa y corrige todo.`
+          : "No se identificaron campos legibles. Nada se adivinó; captura lo que puedas revisar manualmente.",
+      });
+    } catch {
+      setExtraction({ status: "error", message: "No pudimos extraer la información. Puedes revisarla y capturarla manualmente." });
+    }
+  }
+
+  function selectWhatsAppFile(selection: FileSelection) {
+    setWhatsAppFile(selection);
+    setWhatsAppExtraction(idleExtraction);
+    setWhatsAppReviewed(false);
+  }
+
+  function selectFiscalFile(selection: FileSelection) {
+    setFiscalFile(selection);
+    setFiscalExtraction(idleExtraction);
+    setFiscalReviewed(false);
+  }
+
+  function selectBankFile(selection: FileSelection) {
+    setBankFile(selection);
+    setBankExtraction(idleExtraction);
+    setBankReviewed(false);
+  }
 
   function updateField<T extends EvidenceFields>(fields: T, setter: (value: T) => void, key: keyof T, value: string) {
     setter({ ...fields, [key]: value });
@@ -308,14 +434,14 @@ export default function Home() {
                 <h2 className="text-2xl font-semibold tracking-[-0.025em]">Instrucciones de WhatsApp</h2>
                 <p className="mt-2 text-sm leading-6 text-ink/65">Esta captura inicia la revisión y es la única evidencia requerida.</p>
               </div>
-              <FileInput id="whatsapp-file" label="Captura ficticia de WhatsApp" onSelect={setWhatsAppFile} selection={whatsAppFile} />
+              <FileInput id="whatsapp-file" label="Captura ficticia de WhatsApp" onSelect={selectWhatsAppFile} selection={whatsAppFile} />
               <label className="flex gap-3 text-sm leading-5" htmlFor="whatsapp-fictional">
                 <input checked={whatsAppFictional} className="mt-0.5 size-5 accent-jade" id="whatsapp-fictional" onChange={(event) => setWhatsAppFictional(event.target.checked)} type="checkbox" />
                 Confirmo que esta imagen usa únicamente información ficticia o de demostración.
               </label>
               {whatsAppFile.file && (
                 <div className="space-y-4 border-t border-ink/10 pt-5">
-                  <FieldsNotice source="la captura de WhatsApp" />
+                  <ExtractionPanel file={whatsAppFile.file} fictionalConfirmed={whatsAppFictional} onExtract={extractImage} sourceType="whatsapp" state={whatsAppExtraction} />
                   <TextField id="wa-name" label="Nombre mostrado o negocio" maxLength={100} onChange={(value) => updateField(whatsAppFields, setWhatsAppFields, "displayedName", value)} validate={validateName} value={whatsAppFields.displayedName} />
                   <TextField id="wa-rfc" label="RFC" maxLength={13} onChange={(value) => updateField(whatsAppFields, setWhatsAppFields, "rfc", value.toUpperCase())} validate={validateRfc} value={whatsAppFields.rfc} />
                   <TextField id="wa-bank" label="Banco indicado" maxLength={60} onChange={(value) => updateField(whatsAppFields, setWhatsAppFields, "bank", value)} validate={validateBankName} value={whatsAppFields.bank} />
@@ -339,7 +465,7 @@ export default function Home() {
               {fiscalChoice === "skip" && <p className="rounded-xl bg-paper p-3 text-sm leading-5 text-ink/65">Puedes continuar. La ausencia de este documento permanece como información no disponible, no como algo sospechoso.</p>}
               {fiscalChoice === "add" && (
                 <div className="space-y-4 border-t border-ink/10 pt-5">
-                  <FileInput id="fiscal-file" label="Imagen de documento fiscal ficticio" onSelect={setFiscalFile} selection={fiscalFile} />
+                  <FileInput id="fiscal-file" label="Imagen de documento fiscal ficticio" onSelect={selectFiscalFile} selection={fiscalFile} />
                   <label className="flex gap-3 text-sm leading-5" htmlFor="fiscal-fictional">
                     <input checked={fiscalFictional} className="mt-0.5 size-5 accent-jade" id="fiscal-fictional" onChange={(event) => setFiscalFictional(event.target.checked)} type="checkbox" />
                     Confirmo que el documento usa únicamente información ficticia o de demostración.
@@ -347,7 +473,7 @@ export default function Home() {
                   {fiscalFile.file && (
                     <>
                       <div className="rounded-xl border border-amber/60 bg-amber/15 p-3 text-sm leading-5"><strong>Fuente: documento aportado.</strong> Estos datos no están verificados ni autenticados por el SAT.</div>
-                      <FieldsNotice source="el documento fiscal" />
+                      <ExtractionPanel file={fiscalFile.file} fictionalConfirmed={fiscalFictional} onExtract={extractImage} sourceType="fiscal" state={fiscalExtraction} />
                       <TextField id="fiscal-name" label="Razón social o nombre legal" maxLength={100} onChange={(value) => updateField(fiscalFields, setFiscalFields, "legalName", value)} validate={validateName} value={fiscalFields.legalName} />
                       <TextField id="fiscal-rfc" label="RFC" maxLength={13} onChange={(value) => updateField(fiscalFields, setFiscalFields, "rfc", value.toUpperCase())} validate={validateRfc} value={fiscalFields.rfc} />
                       <ReviewConfirmation checked={fiscalReviewed} id="fiscal-reviewed" onChange={setFiscalReviewed} source="el documento aportado (sin verificación SAT)" />
@@ -374,7 +500,7 @@ export default function Home() {
                 <div className="space-y-4 border-t border-ink/10 pt-5">
                   {bankChoice === "screenshot" && (
                     <>
-                      <FileInput id="bank-file" label="Captura ficticia de app bancaria" onSelect={setBankFile} selection={bankFile} />
+                      <FileInput id="bank-file" label="Captura ficticia de app bancaria" onSelect={selectBankFile} selection={bankFile} />
                       <label className="flex gap-3 text-sm leading-5" htmlFor="bank-fictional">
                         <input checked={bankFictional} className="mt-0.5 size-5 accent-jade" id="bank-fictional" onChange={(event) => setBankFictional(event.target.checked)} type="checkbox" />
                         Confirmo que esta imagen usa únicamente información ficticia o de demostración.
@@ -384,7 +510,7 @@ export default function Home() {
                   {(bankChoice === "manual" || bankFile.file) && (
                     <>
                       <div className="rounded-xl border border-amber/60 bg-amber/15 p-3 text-sm leading-5"><strong>Fuente: {bankChoice === "manual" ? "captura manual del usuario" : "captura bancaria aportada"}.</strong> Esto no verifica de forma independiente quién es titular de la cuenta.</div>
-                      {bankChoice === "screenshot" && <FieldsNotice source="la captura bancaria" />}
+                      {bankChoice === "screenshot" && bankFile.file && <ExtractionPanel file={bankFile.file} fictionalConfirmed={bankFictional} onExtract={extractImage} sourceType="bank" state={bankExtraction} />}
                       <TextField id="bank-beneficiary" label="Nombre de beneficiario mostrado" maxLength={100} onChange={(value) => updateField(bankFields, setBankFields, "beneficiaryName", value)} validate={validateName} value={bankFields.beneficiaryName} />
                       <TextField id="bank-name" label="Banco" maxLength={60} onChange={(value) => updateField(bankFields, setBankFields, "bank", value)} validate={validateBankName} value={bankFields.bank} />
                       <TextField id="bank-clabe" inputMode="numeric" label="CLABE" maxLength={18} onChange={(value) => updateField(bankFields, setBankFields, "clabe", value.replace(/\D/g, ""))} validate={validateClabe} value={bankFields.clabe} />
