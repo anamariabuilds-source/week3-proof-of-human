@@ -49,13 +49,19 @@ The main global benchmark is the UK's Confirmation of Payee. This prototype borr
 The product may eventually use stronger authoritative evidence and expand to other messaging channels, while preserving the same pre-payment transaction moment. No trust score and no automated SAFE or FRAUD verdict remain permanent product boundaries.
 
 ## Pending
-- Team Blueprint alignment.
-- Final Blueprint condition mapping.
 - Final vision-provider selection.
-- Final docs/PACKET.md assembly.
-- Implementation prompt.
-- Application code.
+- Final fiscal-document file support.
+- Final extraction-field and comparison matrix.
+- Evidence input and review/correction implementation.
+- Vision extraction and deterministic comparison implementation.
 
 ## Session Close
-No application code has been created before the final Packet.
-Next first move: review the Team Blueprint against the locked decisions and complete docs/PACKET.md.
+### 2026-08-27 — Commit 1 application shell
+
+- Initialized the application with Next.js, TypeScript, and Tailwind CSS.
+- Locked the interface moment to after receiving payment instructions through WhatsApp and before authorizing the bank transfer.
+- Implemented a mobile-first Spanish shell with local-only navigation through required WhatsApp evidence, optional fiscal evidence, optional bank evidence, and pre-transfer review.
+- Added persistent language stating that the prototype compares available information and does not determine whether a counterparty is safe, trustworthy, or fraudulent.
+- Kept evidence input, vision extraction, field definitions, validation, comparison, result states, external APIs, authentication, and persistence outside this commit.
+
+Next first move: implement validated evidence inputs and editable review/correction forms using local state, without adding vision extraction or comparison logic.

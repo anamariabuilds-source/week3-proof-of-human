@@ -12,6 +12,7 @@ out/
 
 # Logs
 *.log
+*.tsbuildinfo
 
 # macOS
 .DS_Store

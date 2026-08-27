@@ -8,6 +8,4 @@ A pre-payment counterparty consistency check for small Mexican businesses receiv
 
 ## Current status
 
-Packet decisions are defined.
-Team Blueprint alignment is pending.
-Application code has not started yet.
+Packet and Blueprint alignment are complete. Commit 1 initializes the mobile-first application shell; evidence input, extraction, and comparison remain intentionally unimplemented.

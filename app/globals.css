@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  background: #f7f4ed;
+  color: #17211d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: #f7f4ed;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgba(245, 197, 99, 0.24), transparent 34rem),
+    #f7f4ed;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button:focus-visible {
+  outline: 3px solid #f5c563;
+  outline-offset: 3px;
+}
