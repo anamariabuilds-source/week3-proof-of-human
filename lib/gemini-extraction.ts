@@ -7,8 +7,13 @@ import {
   extractionJsonSchemas,
   parseExtractionResponse,
 } from "@/lib/extraction-schema";
+import {
+  classifyProviderError,
+  providerHttpStatus,
+  withOneProviderRetry,
+} from "@/lib/provider-retry";
 
-const MODEL = "gemini-2.5-flash-lite";
+const MODEL = "gemini-3.5-flash-lite";
 
 const fieldInstructions: Record<EvidenceSource, string> = {
   whatsapp: `
@@ -46,18 +51,28 @@ export async function extractWithGemini(sourceType: EvidenceSource, bytes: Uint8
   if (!apiKey) throw new GeminiConfigurationError("GEMINI_API_KEY is not configured");
 
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
-    model: MODEL,
-    contents: [
-      { inlineData: { data: Buffer.from(bytes).toString("base64"), mimeType } },
-      { text: promptFor(sourceType) },
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseJsonSchema: extractionJsonSchemas[sourceType],
-      temperature: 0,
+  const response = await withOneProviderRetry(
+    () =>
+      ai.models.generateContent({
+        model: MODEL,
+        contents: [
+          { inlineData: { data: Buffer.from(bytes).toString("base64"), mimeType } },
+          { text: promptFor(sourceType) },
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseJsonSchema: extractionJsonSchemas[sourceType],
+          temperature: 0,
+        },
+      }),
+    (error) => {
+      console.error("Vision provider request failed", {
+        provider: "google-gemini",
+        httpStatus: providerHttpStatus(error),
+        category: classifyProviderError(error),
+      });
     },
-  });
+  );
 
   if (!response.text) throw new Error("Gemini returned no extraction payload");
   return parseExtractionResponse(sourceType, JSON.parse(response.text));

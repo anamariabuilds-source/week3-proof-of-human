@@ -93,3 +93,13 @@ Next first move: select the vision provider and implement extraction-only server
 - Gemini does not evaluate trust, fraud, safety, identity, ownership, authenticity, SAT status, or evidence relationships. Comparison remains deterministic TypeScript work for a later commit.
 
 Next first move: configure `GEMINI_API_KEY` in the deployment environment and complete Deploy 1, then implement deterministic comparison only after Commit 4 approval.
+
+### 2026-08-28 — Gemini model compatibility fix
+
+- The first live local extraction reached Gemini, but `gemini-2.5-flash-lite` returned HTTP 404 because it is no longer available to new API users.
+- Locked the replacement model to `gemini-3.5-flash-lite`; the provider, extraction-only purpose, exact schemas, and all product boundaries remain unchanged.
+- Provider HTTP 429 and 503 failures receive exactly one retry after a bounded 750 ms delay. Other provider errors are not retried.
+- Server diagnostics contain only the provider name, HTTP status, and normalized error category. They do not include keys, images, extracted values, prompts, provider response bodies, or evidence contents.
+- If the retry also encounters provider capacity or rate limits, the existing bounded user-facing fallback remains unchanged and manual entry stays available.
+
+Next first move: after approval, commit this compatibility fix, configure the server-only key in Vercel, and complete Deploy 1.
