@@ -8,4 +8,4 @@ A pre-payment counterparty consistency check for small Mexican businesses receiv
 
 ## Current status
 
-Packet and Blueprint alignment are complete. The mobile-first flow supports validated in-memory evidence input, extraction-only Gemini vision calls, mandatory editable review, and deterministic source-to-source comparison with bounded result states.
+Packet and Blueprint alignment are complete. The mobile-first working slice now covers validated in-memory evidence input, extraction-only Gemini vision calls, mandatory editable review, deterministic source-to-source comparison, bounded next steps, and a non-binding behavior prompt.

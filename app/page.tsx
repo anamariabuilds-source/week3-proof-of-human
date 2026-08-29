@@ -19,6 +19,12 @@ import {
   ComparisonResult,
   buildComparisonResults,
 } from "@/lib/evidence-comparison";
+import {
+  NextStepSection,
+  buildNextStepSections,
+  decisionOptions,
+  summarizeResults,
+} from "@/lib/result-guidance";
 
 type FileSelection = { file: File | null; error: string | null };
 type OptionalChoice = "pending" | "add" | "skip";
@@ -231,6 +237,7 @@ function ValidationMessage({ children }: { children: ReactNode }) {
 export default function Home() {
   const [currentStep, setCurrentStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [decisionAnswer, setDecisionAnswer] = useState<string>("");
 
   const [whatsAppFile, setWhatsAppFile] = useState<FileSelection>(emptyFile);
   const [whatsAppFields, setWhatsAppFields] = useState(initialWhatsApp);
@@ -413,6 +420,8 @@ export default function Home() {
         }
       : undefined,
   });
+  const resultSummary = summarizeResults(comparisonResults);
+  const nextStepSections = buildNextStepSections(comparisonResults);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 py-6 sm:py-10">
@@ -552,11 +561,50 @@ export default function Home() {
               <div className="rounded-xl border border-ink/10 bg-paper p-4 text-sm leading-6 text-ink/70">
                 <strong>Sin veredicto:</strong> estos resultados no determinan confianza, seguridad, fraude, legitimidad ni riesgo. La decisión de pago permanece contigo y ocurre fuera del prototipo.
               </div>
+              <div className="grid grid-cols-3 gap-2" aria-label="Resumen de relaciones">
+                <SummaryCount count={resultSummary.mismatch} label="No coincide" style="border-rose-300 bg-rose-50 text-rose-800" />
+                <SummaryCount count={resultSummary.unverified} label="No verificado" style="border-amber/70 bg-amber/10 text-ink" />
+                <SummaryCount count={resultSummary.match} label="Coincide" style="border-jade/25 bg-mint/60 text-jade" />
+              </div>
               <div className="space-y-4">
                 {comparisonResults.map((result) => <ComparisonCard key={result.id} result={result} />)}
               </div>
+              <section className="space-y-4 border-t border-ink/10 pt-5" aria-labelledby="next-steps-title">
+                <div>
+                  <h2 className="text-xl font-semibold tracking-[-0.02em]" id="next-steps-title">¿Qué puedes hacer ahora?</h2>
+                  <p className="mt-2 text-sm leading-6 text-ink/65">Estas son opciones neutrales según las relaciones mostradas; no son una orden de aprobar o rechazar el pago.</p>
+                </div>
+                {nextStepSections.map((section) => <NextStepCard key={section.state} section={section} />)}
+              </section>
+              <aside className="rounded-xl border border-ink/10 bg-paper p-4 text-xs leading-5 text-ink/65" aria-label="Límites de las fuentes">
+                <p className="font-bold text-ink">Lo que estas fuentes no verifican</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4">
+                  <li>El documento fiscal fue aportado y sus datos no están verificados por el SAT.</li>
+                  <li>La información bancaria no verifica de forma autoritativa quién es titular de la cuenta.</li>
+                  <li>La captura de WhatsApp no verifica quién es dueño del número.</li>
+                  <li>La decisión final de pago permanece contigo.</li>
+                </ul>
+              </aside>
+              <fieldset className="space-y-3 rounded-2xl border border-jade/20 bg-mint/60 p-4">
+                <legend className="px-1 text-lg font-bold">Después de revisar esto, ¿qué harías ahora?</legend>
+                <p className="text-xs leading-5 text-ink/60">Tu respuesta sirve para probar el prototipo. No ejecuta ninguna acción y no se guarda.</p>
+                {decisionOptions.map((option) => (
+                  <label className="flex cursor-pointer gap-3 rounded-xl bg-white/80 p-3 text-sm leading-5" htmlFor={`decision-${option.id}`} key={option.id}>
+                    <input
+                      checked={decisionAnswer === option.id}
+                      className="mt-0.5 size-5 accent-jade"
+                      id={`decision-${option.id}`}
+                      name="next-decision"
+                      onChange={() => setDecisionAnswer(option.id)}
+                      type="radio"
+                      value={option.id}
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </fieldset>
               <div className="rounded-xl border border-jade/20 bg-mint p-4 text-sm leading-6 text-ink/75">
-                <strong>Antes de transferir:</strong> puedes revisar o corregir los datos, pedir otra fuente o confirmar las instrucciones por un canal que ya conozcas. El prototipo no decide por ti.
+                <strong>La decisión sigue siendo tuya.</strong> Este prototipo no envía, aprueba, rechaza, pausa ni bloquea una transferencia.
               </div>
               <div className="rounded-xl bg-paper p-4 text-sm leading-6 text-ink/65">La información y estos resultados viven solo en esta página. Al recargar o cerrar, se eliminan.</div>
             </div>
@@ -582,6 +630,34 @@ const comparisonStyles: Record<ComparisonResult["state"], string> = {
   unverified: "border-amber/70 bg-amber/10",
   match: "border-jade/25 bg-mint/60",
 };
+
+function SummaryCount({ count, label, style }: { count: number; label: string; style: string }) {
+  return (
+    <div className={`rounded-xl border px-2 py-3 text-center ${style}`}>
+      <p className="text-2xl font-bold leading-none">{count}</p>
+      <p className="mt-2 text-[0.68rem] font-bold leading-4">{label}</p>
+    </div>
+  );
+}
+
+const nextStepStyles: Record<NextStepSection["tone"], string> = {
+  attention: "border-rose-200 bg-rose-50",
+  neutral: "border-amber/60 bg-amber/10",
+  consistent: "border-jade/20 bg-mint/50",
+};
+
+function NextStepCard({ section }: { section: NextStepSection }) {
+  return (
+    <article className={`rounded-2xl border p-4 ${nextStepStyles[section.tone]}`}>
+      <h3 className="font-bold">{section.title}</h3>
+      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-5 text-ink/75">
+        {section.details.map((detail) => <li key={detail}>{detail}</li>)}
+      </ul>
+      <p className="mt-3 text-sm font-semibold leading-5">{section.guidance}</p>
+      <p className="mt-2 text-xs leading-5 text-ink/65">{section.boundary}</p>
+    </article>
+  );
+}
 
 const comparisonBadgeStyles: Record<ComparisonResult["state"], string> = {
   mismatch: "bg-rose-100 text-rose-800",

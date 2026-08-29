@@ -50,7 +50,7 @@ The product may eventually use stronger authoritative evidence and expand to oth
 
 ## Pending
 - First deployment after extraction integration.
-- Final source/limit polish, Shadow Clause demo cases, and behavior prompt.
+- Deploy 2 and mechanical/persona testing.
 
 ## Session Close
 ### 2026-08-27 — Commit 1 application shell
@@ -118,3 +118,17 @@ Next first move: after approval, commit this compatibility fix, configure the se
 - No trust score, SAFE/FRAUD verdict, external verification, persistence, or new evidence source was added.
 
 Next first move: implement Commit 5 source/limit polish, legitimate incomplete demo cases, input-validation refinements, and the final “¿Qué harías ahora?” behavior prompt.
+
+### 2026-08-28 — Commit 5 final behavior and Shadow Clause experience
+
+- Added a count-only result summary for `No coincide`, `No verificado`, and `Coincide`. It does not calculate a score, percentage, risk level, or payment recommendation.
+- Added “¿Qué puedes hacer ahora?” guidance derived only from the deterministic relationship states already produced by Commit 4.
+- For `No coincide`, the interface identifies the relationship, both reviewed values, and both sources, then neutrally suggests pausing before payment and confirming the difference through a known or independently confirmed channel when possible. It does not allege fraud or automatically reject payment.
+- For `No verificado`, the interface identifies which source lacks comparable information and offers obtaining another source or continuing the user's normal verification process. It explicitly states that missing information is not suspicious or negative by itself.
+- For `Coincide`, the interface identifies the consistent relationship and states that consistency does not establish safety, legitimacy, or trustworthiness or recommend proceeding with payment.
+- Repeated missing optional evidence remains a neutral collection of `No verificado` relationships; it does not accumulate into a score, risk level, warning, or negative judgment.
+- Consolidated permanent capability limits into one visible section: fiscal data is not SAT-verified, bank information is not authoritative account-owner verification, WhatsApp-number ownership is not verified, and the final payment decision remains with the user.
+- Added the persona-test question “Después de revisar esto, ¿qué harías ahora?” with four neutral response options. The selection stays only in current React memory, triggers no action, and is not stored or persisted.
+- The prototype still does not send, approve, reject, pause, or block a transfer and does not add AI comparison, external verification, authentication, storage, or new evidence sources.
+
+Next first move: complete Deploy 2, run the full mechanical test plan with fictional data, and perform the planned persona test beginning with “¿Qué harías ahora?”.
