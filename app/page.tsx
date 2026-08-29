@@ -15,6 +15,10 @@ import {
   ExtractionResult,
   parseExtractionResponse,
 } from "@/lib/extraction-schema";
+import {
+  ComparisonResult,
+  buildComparisonResults,
+} from "@/lib/evidence-comparison";
 
 type FileSelection = { file: File | null; error: string | null };
 type OptionalChoice = "pending" | "add" | "skip";
@@ -31,7 +35,7 @@ const steps = [
   { title: "WhatsApp", badge: "Requerida", optional: false },
   { title: "Fiscal", badge: "Opcional", optional: true },
   { title: "Banco", badge: "Opcional", optional: true },
-  { title: "Revisión", badge: "Tus fuentes", optional: false },
+  { title: "Resultados", badge: "Comparación", optional: false },
 ] as const;
 
 function FileInput({
@@ -392,6 +396,23 @@ export default function Home() {
   }
 
   const step = steps[currentStep];
+  const comparisonResults = buildComparisonResults({
+    whatsapp: {
+      displayedName: whatsAppFields.displayedName,
+      rfc: whatsAppFields.rfc,
+      bankName: whatsAppFields.bank,
+      clabe: whatsAppFields.clabe,
+    },
+    fiscal: fiscalChoice === "add" ? fiscalFields : undefined,
+    bank: bankChoice === "manual" || bankChoice === "screenshot"
+      ? {
+          beneficiaryName: bankFields.beneficiaryName,
+          bankName: bankFields.bank,
+          clabe: bankFields.clabe,
+          sourceName: bankChoice === "manual" ? "Información bancaria capturada manualmente" : "Captura ficticia de app bancaria",
+        }
+      : undefined,
+  });
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col px-5 py-6 sm:py-10">
@@ -525,15 +546,19 @@ export default function Home() {
           {currentStep === 3 && (
             <div className="mt-5 space-y-5">
               <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.025em]">Fuentes preparadas</h2>
-                <p className="mt-2 text-sm leading-6 text-ink/65">Todavía no se comparan datos ni se generan resultados en este incremento.</p>
+                <h2 className="text-2xl font-semibold tracking-[-0.025em]">Relaciones entre tus fuentes</h2>
+                <p className="mt-2 text-sm leading-6 text-ink/65">Comparamos únicamente los valores que revisaste y corregiste. Gemini no decide estos resultados.</p>
               </div>
-              <div className="space-y-3">
-                <SourceSummary label="WhatsApp" detail="Captura ficticia y datos revisados" status="Incluida" />
-                <SourceSummary label="Documento fiscal" detail={fiscalChoice === "add" ? "Documento aportado; no verificado por SAT" : "No agregado; ausencia neutral"} status={fiscalChoice === "add" ? "Incluido" : "No agregado"} />
-                <SourceSummary label="Información bancaria" detail={bankChoice === "manual" ? "Capturada manualmente" : bankChoice === "screenshot" ? "Captura bancaria aportada" : "No agregada; ausencia neutral"} status={bankChoice === "skip" ? "No agregada" : "Incluida"} />
+              <div className="rounded-xl border border-ink/10 bg-paper p-4 text-sm leading-6 text-ink/70">
+                <strong>Sin veredicto:</strong> estos resultados no determinan confianza, seguridad, fraude, legitimidad ni riesgo. La decisión de pago permanece contigo y ocurre fuera del prototipo.
               </div>
-              <div className="rounded-xl bg-paper p-4 text-sm leading-6 text-ink/65">La información vive solo en el estado local de esta página. Al recargar o cerrar, se elimina.</div>
+              <div className="space-y-4">
+                {comparisonResults.map((result) => <ComparisonCard key={result.id} result={result} />)}
+              </div>
+              <div className="rounded-xl border border-jade/20 bg-mint p-4 text-sm leading-6 text-ink/75">
+                <strong>Antes de transferir:</strong> puedes revisar o corregir los datos, pedir otra fuente o confirmar las instrucciones por un canal que ya conozcas. El prototipo no decide por ti.
+              </div>
+              <div className="rounded-xl bg-paper p-4 text-sm leading-6 text-ink/65">La información y estos resultados viven solo en esta página. Al recargar o cerrar, se eliminan.</div>
             </div>
           )}
 
@@ -543,7 +568,7 @@ export default function Home() {
         <div className="mt-8 flex items-center gap-3">
           {currentStep > 0 && <button className="min-h-12 rounded-xl border border-ink/20 px-5 text-sm font-bold transition hover:bg-paper" onClick={goBack} type="button">Atrás</button>}
           {currentStep < steps.length - 1 && <button className="min-h-12 flex-1 rounded-xl bg-jade px-5 text-sm font-bold text-white transition hover:bg-jade/90" onClick={goNext} type="button">Continuar</button>}
-          {currentStep === steps.length - 1 && <button className="min-h-12 flex-1 rounded-xl bg-ink/15 px-5 text-sm font-bold text-ink/60" disabled type="button">Comparación aún no disponible</button>}
+          {currentStep === steps.length - 1 && <button className="min-h-12 flex-1 rounded-xl bg-ink/15 px-5 text-sm font-bold text-ink/60" disabled type="button">Relaciones mostradas arriba</button>}
         </div>
       </section>
 
@@ -552,14 +577,36 @@ export default function Home() {
   );
 }
 
-function SourceSummary({ label, detail, status }: { label: string; detail: string; status: string }) {
+const comparisonStyles: Record<ComparisonResult["state"], string> = {
+  mismatch: "border-rose-300 bg-rose-50",
+  unverified: "border-amber/70 bg-amber/10",
+  match: "border-jade/25 bg-mint/60",
+};
+
+const comparisonBadgeStyles: Record<ComparisonResult["state"], string> = {
+  mismatch: "bg-rose-100 text-rose-800",
+  unverified: "bg-amber/35 text-ink",
+  match: "bg-jade text-white",
+};
+
+function ComparisonCard({ result }: { result: ComparisonResult }) {
   return (
-    <div className="rounded-xl border border-ink/10 p-4">
+    <article className={`rounded-2xl border p-4 ${comparisonStyles[result.state]}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="font-bold">{label}</p>
-        <span className="rounded-full bg-paper px-2 py-1 text-xs font-bold text-ink/60">{status}</span>
+        <h3 className="font-bold leading-5">{result.relationship}</h3>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${comparisonBadgeStyles[result.state]}`}>{result.label}</span>
       </div>
-      <p className="mt-1 text-sm leading-5 text-ink/60">{detail}</p>
-    </div>
+      <dl className="mt-4 space-y-3 rounded-xl bg-white/70 p-3">
+        {[result.sourceA, result.sourceB].map((source) => (
+          <div key={source.name}>
+            <dt className="text-xs font-bold uppercase tracking-[0.08em] text-ink/50">{source.name}</dt>
+            <dd className="mt-1 break-words text-sm font-semibold">{source.value ?? "No disponible"}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-sm font-semibold leading-5">{result.explanation}</p>
+      <p className="mt-2 text-sm leading-5 text-ink/70">{result.boundary}</p>
+      {result.limitation && <p className="mt-3 border-t border-ink/10 pt-3 text-xs leading-5 text-ink/60"><strong>Límite:</strong> {result.limitation}</p>}
+    </article>
   );
 }

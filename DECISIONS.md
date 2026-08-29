@@ -49,9 +49,8 @@ The main global benchmark is the UK's Confirmation of Payee. This prototype borr
 The product may eventually use stronger authoritative evidence and expand to other messaging channels, while preserving the same pre-payment transaction moment. No trust score and no automated SAFE or FRAUD verdict remain permanent product boundaries.
 
 ## Pending
-- Final deterministic comparison matrix.
-- Deterministic comparison and bounded result-state implementation.
 - First deployment after extraction integration.
+- Final source/limit polish, Shadow Clause demo cases, and behavior prompt.
 
 ## Session Close
 ### 2026-08-27 — Commit 1 application shell
@@ -103,3 +102,19 @@ Next first move: configure `GEMINI_API_KEY` in the deployment environment and co
 - If the retry also encounters provider capacity or rate limits, the existing bounded user-facing fallback remains unchanged and manual entry stays available.
 
 Next first move: after approval, commit this compatibility fix, configure the server-only key in Vercel, and complete Deploy 1.
+
+### 2026-08-28 — Commit 4 deterministic evidence comparison
+
+- Locked the deterministic comparison matrix to five source-to-source relationships: WhatsApp RFC ↔ fiscal RFC; WhatsApp displayed name ↔ fiscal legal name; WhatsApp CLABE ↔ bank CLABE; WhatsApp bank name ↔ bank name; and WhatsApp displayed name ↔ bank beneficiary name.
+- Comparison uses only the editable values after the user has reviewed and corrected each included source. Raw Gemini output is never compared directly, and Gemini does not classify relationships.
+- `Coincide` means both supported values are present and equal after the field's transparent normalization. It does not mean the counterparty is safe or trustworthy.
+- `No coincide` means both supported values are present and different after normalization. It does not prove fraud, illegitimacy, or risk.
+- `No verificado` means one or both supported values are absent, so consistency or conflict cannot be established. It is not suspicious or negative evidence.
+- RFC normalization trims whitespace and compares uppercase values. CLABE normalization trims whitespace and otherwise compares the reviewed 18-digit value exactly.
+- Name and bank-name normalization applies Unicode NFKC normalization, trim, Spanish lowercase, removal of periods and commas, replacement of other punctuation/symbols with spaces, and repeated-whitespace collapse. It does not remove corporate suffixes, strip accents, use fuzzy similarity, infer aliases, or use semantic/AI matching.
+- When two reviewed name fields are present but the transparent normalized strings differ, the relationship is `No coincide`; the interface explicitly notes that commercial, legal, personal, and bank-displayed names may legitimately differ. When either name is absent, it is `No verificado`.
+- Results are ordered `No coincide`, then `No verificado`, then `Coincide`; matching results remain visible and every card shows both source names and reviewed values.
+- Optional missing fiscal or bank evidence uses the neutral `No verificado` presentation and is visually distinct from a conflict.
+- No trust score, SAFE/FRAUD verdict, external verification, persistence, or new evidence source was added.
+
+Next first move: implement Commit 5 source/limit polish, legitimate incomplete demo cases, input-validation refinements, and the final “¿Qué harías ahora?” behavior prompt.
