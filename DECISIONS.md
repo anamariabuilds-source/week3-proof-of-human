@@ -132,3 +132,15 @@ Next first move: implement Commit 5 source/limit polish, legitimate incomplete d
 - The prototype still does not send, approve, reject, pause, or block a transfer and does not add AI comparison, external verification, authentication, storage, or new evidence sources.
 
 Next first move: complete Deploy 2, run the full mechanical test plan with fictional data, and perform the planned persona test beginning with “¿Qué harías ahora?”.
+
+### 2026-08-30 — Persona Test 1 proportional mismatch fix
+
+- Persona Test 1 confirmed the core behavior: the user understood the bounded states, chose to verify before paying, and found the bank-beneficiary mismatch appropriately pause-worthy.
+- The test found that the red treatment for WhatsApp commercial name ↔ fiscal legal name created disproportionate alarm before the limitation copy was read, even though those names can legitimately differ.
+- The deterministic relationship remains `No coincide`; no normalization, suffix removal, fuzzy or semantic matching, AI judgment, score, or new state was added.
+- Only the fiscal commercial/legal-name mismatch receives a lower-alarm amber presentation, while retaining the `No coincide` label. A nearby note now states that commercial and legal names can legitimately differ and that the textual difference does not demonstrate fraud.
+- RFC, CLABE, bank-name, and WhatsApp displayed-name ↔ bank-beneficiary mismatches keep the existing conflict treatment. The useful bank-beneficiary pause signal is not weakened.
+- The fiscal legal-name review control is now multiline so long extracted legal names can be reviewed without appearing cut off.
+- The manual bank option now states before selection that it will request beneficiary name, bank, and CLABE.
+
+Next first move: rerun the relevant mechanical and persona scenarios, then complete the final deployment with the proportional-treatment fix.

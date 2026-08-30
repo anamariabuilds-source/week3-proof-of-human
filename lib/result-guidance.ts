@@ -15,6 +15,22 @@ export type NextStepSection = {
   tone: "attention" | "neutral" | "consistent";
 };
 
+export type ComparisonPresentation = {
+  treatment: "standard" | "proportional-name-difference";
+  nearStateNote: string | null;
+};
+
+export function comparisonPresentation(result: ComparisonResult): ComparisonPresentation {
+  if (result.id === "fiscal-name" && result.state === "mismatch") {
+    return {
+      treatment: "proportional-name-difference",
+      nearStateNote: "Los nombres comercial y legal pueden diferir legítimamente. Esta diferencia de texto no demuestra fraude.",
+    };
+  }
+
+  return { treatment: "standard", nearStateNote: null };
+}
+
 export const decisionOptions = [
   { id: "verify", label: "Verificaría un dato antes de pagar" },
   { id: "another-source", label: "Buscaría otra fuente de información" },

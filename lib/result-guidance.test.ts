@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ReviewedEvidence, buildComparisonResults } from "./evidence-comparison";
-import { buildNextStepSections, decisionOptions, summarizeResults } from "./result-guidance";
+import {
+  buildNextStepSections,
+  comparisonPresentation,
+  decisionOptions,
+  summarizeResults,
+} from "./result-guidance";
 
 const mixedEvidence: ReviewedEvidence = {
   whatsapp: {
@@ -66,5 +71,22 @@ describe("final result guidance", () => {
     for (const option of decisionOptions) {
       expect(Object.keys(option).sort()).toEqual(["id", "label"]);
     }
+  });
+
+  it("softens only the fiscal commercial/legal-name mismatch presentation", () => {
+    const evidence = structuredClone(mixedEvidence);
+    evidence.fiscal!.legalName = "Distribuidora Sol SA de CV";
+    evidence.bank!.beneficiaryName = "Beneficiario Diferente";
+    const results = buildComparisonResults(evidence);
+    const fiscalName = results.find((result) => result.id === "fiscal-name")!;
+    const beneficiaryName = results.find((result) => result.id === "beneficiary-name")!;
+
+    expect(fiscalName.state).toBe("mismatch");
+    expect(comparisonPresentation(fiscalName)).toEqual({
+      treatment: "proportional-name-difference",
+      nearStateNote: "Los nombres comercial y legal pueden diferir legítimamente. Esta diferencia de texto no demuestra fraude.",
+    });
+    expect(beneficiaryName.state).toBe("mismatch");
+    expect(comparisonPresentation(beneficiaryName)).toEqual({ treatment: "standard", nearStateNote: null });
   });
 });

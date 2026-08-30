@@ -22,6 +22,7 @@ import {
 import {
   NextStepSection,
   buildNextStepSections,
+  comparisonPresentation,
   decisionOptions,
   summarizeResults,
 } from "@/lib/result-guidance";
@@ -105,6 +106,7 @@ function TextField({
   hint,
   inputMode,
   maxLength,
+  multiline = false,
 }: {
   id: string;
   label: string;
@@ -114,6 +116,7 @@ function TextField({
   hint?: string;
   inputMode?: "text" | "numeric";
   maxLength: number;
+  multiline?: boolean;
 }) {
   const error = validate(value);
   return (
@@ -121,17 +124,30 @@ function TextField({
       <label className="text-sm font-bold" htmlFor={id}>
         {label} <span className="font-normal text-ink/45">(si aparece)</span>
       </label>
-      <input
-        aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
-        aria-invalid={Boolean(error)}
-        className="mt-2 min-h-12 w-full rounded-xl border border-ink/20 bg-white px-3 text-base outline-none transition focus:border-jade focus:ring-2 focus:ring-jade/15"
-        id={id}
-        inputMode={inputMode}
-        maxLength={maxLength}
-        onChange={(event) => onChange(event.target.value)}
-        type="text"
-        value={value}
-      />
+      {multiline ? (
+        <textarea
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+          aria-invalid={Boolean(error)}
+          className="mt-2 min-h-24 w-full resize-y rounded-xl border border-ink/20 bg-white px-3 py-3 text-base outline-none transition focus:border-jade focus:ring-2 focus:ring-jade/15"
+          id={id}
+          maxLength={maxLength}
+          onChange={(event) => onChange(event.target.value)}
+          rows={3}
+          value={value}
+        />
+      ) : (
+        <input
+          aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+          aria-invalid={Boolean(error)}
+          className="mt-2 min-h-12 w-full rounded-xl border border-ink/20 bg-white px-3 text-base outline-none transition focus:border-jade focus:ring-2 focus:ring-jade/15"
+          id={id}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          onChange={(event) => onChange(event.target.value)}
+          type="text"
+          value={value}
+        />
+      )}
       {hint && !error && (
         <p className="mt-1 text-xs text-ink/50" id={`${id}-hint`}>
           {hint}
@@ -504,7 +520,7 @@ export default function Home() {
                     <>
                       <div className="rounded-xl border border-amber/60 bg-amber/15 p-3 text-sm leading-5"><strong>Fuente: documento aportado.</strong> Estos datos no están verificados ni autenticados por el SAT.</div>
                       <ExtractionPanel file={fiscalFile.file} fictionalConfirmed={fiscalFictional} onExtract={extractImage} sourceType="fiscal" state={fiscalExtraction} />
-                      <TextField id="fiscal-name" label="Razón social o nombre legal" maxLength={100} onChange={(value) => updateField(fiscalFields, setFiscalFields, "legalName", value)} validate={validateName} value={fiscalFields.legalName} />
+                      <TextField id="fiscal-name" label="Razón social o nombre legal" maxLength={100} multiline onChange={(value) => updateField(fiscalFields, setFiscalFields, "legalName", value)} validate={validateName} value={fiscalFields.legalName} />
                       <TextField id="fiscal-rfc" label="RFC" maxLength={13} onChange={(value) => updateField(fiscalFields, setFiscalFields, "rfc", value.toUpperCase())} validate={validateRfc} value={fiscalFields.rfc} />
                       <ReviewConfirmation checked={fiscalReviewed} id="fiscal-reviewed" onChange={setFiscalReviewed} source="el documento aportado (sin verificación SAT)" />
                     </>
@@ -521,7 +537,7 @@ export default function Home() {
                 <p className="mt-2 text-sm leading-6 text-ink/65">Es opcional. Elige una fuente o continúa sin agregarla.</p>
               </div>
               <div className="grid gap-3">
-                <ChoiceButton onClick={() => { setBankChoice("manual"); setStepError(null); }} selected={bankChoice === "manual"}>Capturar información manualmente</ChoiceButton>
+                <ChoiceButton onClick={() => { setBankChoice("manual"); setStepError(null); }} selected={bankChoice === "manual"}>Capturar manualmente: beneficiario, banco y CLABE</ChoiceButton>
                 <ChoiceButton onClick={() => { setBankChoice("screenshot"); setStepError(null); }} selected={bankChoice === "screenshot"}>Agregar captura de app bancaria</ChoiceButton>
                 <ChoiceButton onClick={() => { setBankChoice("skip"); setStepError(null); }} selected={bankChoice === "skip"}>No agregar por ahora</ChoiceButton>
               </div>
@@ -666,12 +682,15 @@ const comparisonBadgeStyles: Record<ComparisonResult["state"], string> = {
 };
 
 function ComparisonCard({ result }: { result: ComparisonResult }) {
+  const presentation = comparisonPresentation(result);
+  const isProportionalNameDifference = presentation.treatment === "proportional-name-difference";
   return (
-    <article className={`rounded-2xl border p-4 ${comparisonStyles[result.state]}`}>
+    <article className={`rounded-2xl border p-4 ${isProportionalNameDifference ? "border-amber/70 bg-amber/10" : comparisonStyles[result.state]}`}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="font-bold leading-5">{result.relationship}</h3>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${comparisonBadgeStyles[result.state]}`}>{result.label}</span>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${isProportionalNameDifference ? "bg-amber/35 text-ink" : comparisonBadgeStyles[result.state]}`}>{result.label}</span>
       </div>
+      {presentation.nearStateNote && <p className="mt-3 rounded-xl bg-white/70 p-3 text-sm font-semibold leading-5 text-ink/75">{presentation.nearStateNote}</p>}
       <dl className="mt-4 space-y-3 rounded-xl bg-white/70 p-3">
         {[result.sourceA, result.sourceB].map((source) => (
           <div key={source.name}>
@@ -682,7 +701,7 @@ function ComparisonCard({ result }: { result: ComparisonResult }) {
       </dl>
       <p className="mt-3 text-sm font-semibold leading-5">{result.explanation}</p>
       <p className="mt-2 text-sm leading-5 text-ink/70">{result.boundary}</p>
-      {result.limitation && <p className="mt-3 border-t border-ink/10 pt-3 text-xs leading-5 text-ink/60"><strong>Límite:</strong> {result.limitation}</p>}
+      {result.limitation && !presentation.nearStateNote && <p className="mt-3 border-t border-ink/10 pt-3 text-xs leading-5 text-ink/60"><strong>Límite:</strong> {result.limitation}</p>}
     </article>
   );
 }
